@@ -11,7 +11,7 @@ class OrderData(StatesGroup):
 class RegOrderData(StatesGroup):
     pay = State()
     delivery = State()
-    delivery = State()
     location = State()
+    location1 = State()
     comment = State()
     confirm = State()

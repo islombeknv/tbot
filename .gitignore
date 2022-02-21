@@ -106,11 +106,10 @@ __pypackages__/
 celerybeat-schedule
 celerybeat.pid
 
-# SageMath parsed files
+
 *.sage.py
 
-# Environments
-.env
+
 .venv
 env/
 venv/
@@ -141,4 +140,4 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-
+settings_local.py

@@ -6,12 +6,13 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
 from keyboards.default.newkeyboards import menu, settings
-from keyboards.default.orderkeyboards import but, ordbut, delevery, checkbutton, comback
+from keyboards.default.orderkeyboards import but, ordbut, delevery, checkbutton, comback, location
 from keyboards.inline.utils import my_callback
 from data.config import ADMINS
 from loader import dp
 from save import save_user
 from states.orderState import OrderData, RegOrderData
+from utils.location import get_address_from_coords
 
 
 @dp.message_handler(Command('start'))
@@ -164,16 +165,14 @@ async def regorder2(message: Message, state: FSMContext):
         await state.update_data(
             {"delevery": message.text}
         )
-        data = await state.get_data()
-        pay = data.get("pay")
-        delever = data.get("delevery")
-        text = f"<b>Sizning buyurtmangiz</b>\nTo'lov:{pay}\nYetkazib berish:{delever}"
-        await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
+        await message.answer(f'Manzilni kiriting, tekst yoki lokatsiya yuboring', reply_markup=location)
         await RegOrderData.location.set()
 
 
-@dp.message_handler(state=RegOrderData.location)
+@dp.message_handler(content_types='location', state=RegOrderData.location)
 async def regorder2(message: Message, state: FSMContext):
+    address_str = get_address_from_coords(f"{message.location.longitude}, {message.location.latitude},")
+    print(address_str)
     if message.text == '⬅️ Orqaga':
         await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
         await RegOrderData.delivery.set()

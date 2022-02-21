@@ -59,3 +59,17 @@ comback = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
+
+location = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text='📍Lokatsiya yuborish', request_location=True)
+
+        ],
+        [
+            KeyboardButton(text='⬅️ Orqaga')
+
+        ],
+    ],
+    resize_keyboard=True
+)
