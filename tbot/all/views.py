@@ -32,7 +32,24 @@ class ProductRetrieveAPIView(RetrieveAPIView):
 
 class OrderCreateView(CreateAPIView):
     serializer_class = OrderModelSerializer
-    queryset = OrderModel.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        product = self.request.POST.get('product')
+        price = self.request.POST.get('price')
+        address = self.request.POST.get('address')
+        number = self.request.POST.get('number')
+        order = self.request.POST.get('order')
+        user = self.request.POST.get('user')
+        user_id = TelegramUserModel.objects.get(tg_id=user)
+        if user_id:
+            OrderModel.objects.create(product=product, price=price, address=address,
+                                      number=number, order=order, user=user_id)
+            qs = KorzinaModel.objects.filter(user_id=user)
+            if qs:
+                for i in qs:
+                    i.delete()
+            return Response(status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserListAPIView(ListAPIView):
@@ -98,4 +115,3 @@ def KorzinaDelateAPIView(request, *args, **kwargs):
 class TelegramRegistrationView(CreateAPIView):
     serializer_class = TelegramRegistrationSerializer
     queryset = TelegramUserModel.objects.all()
-

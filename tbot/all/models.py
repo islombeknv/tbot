@@ -1,5 +1,3 @@
-from unicodedata import category
-
 from django.db import models
 
 
@@ -43,31 +41,28 @@ class TelegramUserModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.tg_id} {self.first_name} {self.last_name}'
+        return f'{self.tg_id}'
 
     class Meta:
         verbose_name = 'Telegram user'
         verbose_name_plural = 'Telegram users'
 
 
-order = (
-    ('Processing', 'Processing'),
-    ('Confirmed', 'Confirmed'),
-    ('Performing', 'Performing'),
-    ('Performed', 'Performed'),
-    ('Canceled', 'Canceled'),
+STATUS = (
+    ('Kutilmoqda', 'Kutilmoqda'),
+    ('Tasdiqlandi', 'Tasdiqlandi'),
+    ('Yuborildi', 'Yuborildi'),
+    ('Yetkazildi', 'Yetkazildi'),
 )
 
 
 class OrderModel(models.Model):
-    p_id = models.IntegerField()
-    user_id = models.IntegerField()
-    user = models.CharField(max_length=255)
-    product = models.CharField(max_length=100)
+    user = models.ForeignKey(TelegramUserModel, on_delete=models.CASCADE)
+    product = models.TextField()
     price = models.CharField(max_length=100)
     address = models.CharField(max_length=200)
     number = models.CharField(max_length=15)
-    order = models.CharField(max_length=50, choices=order, blank=True)
+    order = models.CharField(max_length=50, choices=STATUS, default='Kutilmoqda', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
