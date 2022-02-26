@@ -6,7 +6,7 @@ from keyboards.default.mahsulotSoni import mah_miqdori
 from keyboards.default.newkeyboards import menu
 from keyboards.default.orderkeyboards import but
 from states.orderState import OrderData
-from loader import dp
+from loader import dp, bot
 from save import save_korzina
 
 
@@ -19,18 +19,16 @@ async def products(message: types.Message, state: FSMContext):
     elif message.text == '⬅️ Orqaga':
         await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
-
-    data = requests.get('http://127.0.0.1:8000/category/').json()
-    for i in data:
-        if message.text == i['title']:
-            post_cat = requests.get(f'http://127.0.0.1:8000/category/{int(i["id"])}').json()
+    await bot.send_chat_action(message.chat.id, 'typing')
+    data = requests.get(f'https://papayes.cf/category/{message.text}').json()
+    if data:
+        for x in data:
             keyboard_2 = []
-            for x in post_cat:
-                keyboard_2.append(
-                    KeyboardButton(
-                        text=f"{x['title']}"
-                    )
+            keyboard_2.append(
+                KeyboardButton(
+                    text=f"{x['title']}"
                 )
+            )
             prod_key = ReplyKeyboardMarkup(
                 keyboard=[
                     keyboard_2,
@@ -48,20 +46,19 @@ async def products(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=OrderData.products)
 async def products_detail(message: types.Message, state: FSMContext):
-    photo = "https://kitoblardunyosi.uz/image/cache/catalog/001-Kitoblar/003_boshqalar/006_ilmiy_ommabop/python-3d-web-500x500h.jpg"
-    detail_prod = requests.get(f'http://127.0.0.1:8000/prod/?q={message.text}').json()
+    detail_prod = requests.get(f'https://papayes.cf/prod/?q={message.text}').json()
     if message.text == '🏠 Bosh menyu':
         await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
-
     elif message.text == '⬅ Orqaga':
         await message.answer('Categories', reply_markup=but)
         await OrderData.category.set()
 
+    await bot.send_chat_action(message.chat.id, 'typing')
     for y in detail_prod:
         if str(message.text) == str(y['title']):
             text = f"{y['title']}\n\n{y['description']}\n\nNarxi: {y['price']:,} sum"
-            await message.answer_photo(photo=photo, caption=text)
+            await message.answer_photo(photo=y['image'], caption=text)
             await message.answer('Miqdorini tanlang yoki kiriting', reply_markup=mah_miqdori)
             await OrderData.detail.set()
             await state.update_data(

@@ -1,8 +1,5 @@
 from threading import Thread
-from loader import dp
 import requests
-
-from utils import on_startup_notify
 
 
 def threaded(fn):
@@ -23,18 +20,9 @@ def save_user(message, number=None, address=None) -> int():
         'number': number,
         'address': address,
     }
-    x = requests.post(url='http://127.0.0.1:8000/user/register/', data=post_data)
+    x = requests.post(url='https://papayes.cf/user/register/', data=post_data)
     return x.status_code
 
-
-@threaded
-def save_order(order):
-    requests.post(url='http://127.0.0.1:8000//order/', data=order)
-
-
-@threaded
-def comment_post(order):
-    requests.post(url='http://127.0.0.1:8000//order/', data=order)
 
 
 @threaded
@@ -45,9 +33,22 @@ def save_korzina(message, product, price, count):
         'price': price,
         'count': count,
     }
-    requests.post(url='http://127.0.0.1:8000/korzina/create/', data=post_data)
+    requests.post(url='https://papayes.cf/korzina/create/', data=post_data)
 
 
 @threaded
 def del_korzina(pk):
-    requests.delete(url=f'http://127.0.0.1:8000/korzina/delete/{pk}')
+    requests.delete(url=f'https://papayes.cf/korzina/delete/{pk}')
+
+
+def Create_order(product, price, address, number, user) -> int():
+    data = {
+        "product": f"{product}",
+        "price": f"{price}",
+        "address": f"{address}",
+        "number": f"{number}",
+        "order": 'Kutilmoqda',
+        "user": user
+    }
+    x = requests.post(url='https://papayes.cf/order/', data=data)
+    return x.status_code

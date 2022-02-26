@@ -1,7 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import requests
 
-data = requests.get('http://127.0.0.1:8000/category/').json()
+data = requests.get('https://papayes.cf/category/').json()
 
 but = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, )
 but.add(*(KeyboardButton(text=str(num['title'])) for num in data))
@@ -64,6 +64,20 @@ location = ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text='📍Lokatsiya yuborish', request_location=True)
+
+        ],
+        [
+            KeyboardButton(text='⬅️ Orqaga')
+
+        ],
+    ],
+    resize_keyboard=True
+)
+
+number = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text='📲 Telefon raqamni yuborish', request_contact=True)
 
         ],
         [

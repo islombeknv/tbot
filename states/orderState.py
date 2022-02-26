@@ -10,8 +10,8 @@ class OrderData(StatesGroup):
 
 class RegOrderData(StatesGroup):
     pay = State()
+    number = State()
     delivery = State()
     location = State()
-    location1 = State()
     comment = State()
     confirm = State()

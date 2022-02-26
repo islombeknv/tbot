@@ -7,7 +7,7 @@ from data.config import ADMINS
 
 
 async def on_startup_notify(dp: Dispatcher):
-    data = requests.get(f'http://127.0.0.1:8000/user/').json()
+    data = requests.get(f'https://papayes.cf/user/').json()
     for admin in ADMINS:
         try:
             await dp.bot.send_message(admin, "Admin Bot qayta ishga tushdi")
