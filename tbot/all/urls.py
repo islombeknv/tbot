@@ -5,9 +5,8 @@ from .views import *
 urlpatterns = [
     path('user/register/', TelegramRegistrationView.as_view()),
     path('category/', CategoryListAPIView.as_view()),
-    path('prod/', ServiceListAPIView.as_view()),
-    path('category/<str:pk>/', ServiceListAPIView.as_view()),
-    path('products/<int:pk>/', ProductRetrieveAPIView.as_view()),
+    path('category/<str:cat>/', ServiceListAPIView.as_view()),
+    path('product/', Service2ListAPIView.as_view()),
     path('order/', OrderCreateView.as_view()),
     path('user/<int:pk>/', UserListAPIView.as_view()),
     path('user/', UserListAPIView.as_view()),

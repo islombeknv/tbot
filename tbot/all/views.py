@@ -1,23 +1,46 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, DestroyAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from .serializers import *
+
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 1
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'page_number': self.page.number,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data,
+        })
 
 
 class ServiceListAPIView(ListAPIView):
     serializer_class = ServiceModelSerializer
 
     def get_queryset(self):
-        q = self.request.GET.get('q')
-        cat = CategoryModel.objects.get(title=self.kwargs.get('pk'))
+        cat = CategoryModel.objects.get(title=self.kwargs.get('cat'))
         if cat:
             return ProductModel.objects.filter(category=cat)
-        elif q:
+        else:
+            return ProductModel.objects.none()
+
+
+class Service2ListAPIView(ListAPIView):
+    serializer_class = ServiceModelSerializer
+
+    def get_queryset(self):
+        q = self.request.GET.get('q')
+        if q:
             return ProductModel.objects.filter(title__icontains=q)
         else:
             return ProductModel.objects.none()
+
 
 
 class CategoryListAPIView(ListAPIView):
@@ -64,6 +87,7 @@ class UserListAPIView(ListAPIView):
 
 class OrderListAPIView(ListAPIView):
     serializer_class = OrderModelSerializer
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         user = TelegramUserModel.objects.get(tg_id=self.kwargs.get('pk'))
