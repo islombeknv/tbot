@@ -92,8 +92,8 @@ class OrderListAPIView(ListAPIView):
     def get_queryset(self):
         user = TelegramUserModel.objects.get(tg_id=self.kwargs.get('pk'))
         if user:
-            return OrderModel.objects.filter(user=user)
-        return OrderModel.objects.all()
+            return OrderModel.objects.filter(user=user).order_by('-pk')
+        return OrderModel.objects.nona()
 
 
 class KorzinCreateView(CreateAPIView):
