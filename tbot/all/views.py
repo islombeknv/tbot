@@ -12,6 +12,7 @@ class ServiceListAPIView(ListAPIView):
     def get_queryset(self):
         pk = self.kwargs.get('pk')
         q = self.request.GET.get('q')
+        cat = CategoryModel.objects.all()
         if pk:
             return ProductModel.objects.filter(category_id=pk)
         elif q:
@@ -66,9 +67,9 @@ class OrderListAPIView(ListAPIView):
     serializer_class = OrderModelSerializer
 
     def get_queryset(self):
-        pk = self.kwargs.get('pk')
-        if pk:
-            return OrderModel.objects.filter(user_id=pk)
+        user = TelegramUserModel.objects.get(tg_id=self.kwargs.get('pk'))
+        if user:
+            return OrderModel.objects.filter(user=user)
         return OrderModel.objects.all()
 
 
