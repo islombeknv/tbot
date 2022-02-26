@@ -10,11 +10,10 @@ class ServiceListAPIView(ListAPIView):
     serializer_class = ServiceModelSerializer
 
     def get_queryset(self):
-        pk = self.kwargs.get('pk')
         q = self.request.GET.get('q')
-        cat = CategoryModel.objects.all()
-        if pk:
-            return ProductModel.objects.filter(category_id=pk)
+        cat = CategoryModel.objects.get(title=self.kwargs.get('pk'))
+        if cat:
+            return ProductModel.objects.filter(category=cat)
         elif q:
             return ProductModel.objects.filter(title__icontains=q)
         else:
