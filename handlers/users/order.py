@@ -19,46 +19,50 @@ async def products(message: types.Message, state: FSMContext):
     elif message.text == '⬅️ Orqaga':
         await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
-    await bot.send_chat_action(message.chat.id, 'typing')
-    data = requests.get(f'https://papayes.cf/category/{message.text}').json()
-    if data:
-        for x in data:
-            keyboard_2 = []
-            keyboard_2.append(
-                KeyboardButton(
-                    text=f"{x['title']}"
+    try:
+        data = requests.get(f'http://127.0.0.1:8000/category/{message.text}').json()
+        if data:
+            for x in data:
+                keyboard_2 = []
+                keyboard_2.append(
+                    KeyboardButton(
+                        text=f"{x['title']}"
+                    )
                 )
-            )
-            prod_key = ReplyKeyboardMarkup(
-                keyboard=[
-                    keyboard_2,
-                    [
-                        KeyboardButton(text='🏠 Bosh menyu'),
-                        KeyboardButton(text='⬅ Orqaga')
+                prod_key = ReplyKeyboardMarkup(
+                    keyboard=[
+                        keyboard_2,
+                        [
+                            KeyboardButton(text='🏠 Bosh menyu'),
+                            KeyboardButton(text='⬅ Orqaga')
+                        ],
                     ],
-                ],
-                resize_keyboard=True,
-                row_width=2
-            )
-            await message.answer('Mahsulotlar', reply_markup=prod_key)
-            await OrderData.products.set()
+                    resize_keyboard=True,
+                    row_width=2
+                )
+                await bot.send_chat_action(message.chat.id, 'typing')
+                await message.answer('Mahsulotlar', reply_markup=prod_key)
+                await OrderData.products.set()
+    except:
+        pass
 
 
 @dp.message_handler(state=OrderData.products)
 async def products_detail(message: types.Message, state: FSMContext):
-    detail_prod = requests.get(f'https://papayes.cf/prod/?q={message.text}').json()
+    photo = "https://kitoblardunyosi.uz/image/cache/catalog/001-Kitoblar/003_boshqalar/006_ilmiy_ommabop/python-3d-web-500x500h.jpg"
+    detail_prod = requests.get(f'http://127.0.0.1:8000/product/?q={message.text}').json()
     if message.text == '🏠 Bosh menyu':
         await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
+
     elif message.text == '⬅ Orqaga':
         await message.answer('Categories', reply_markup=but)
         await OrderData.category.set()
 
-    await bot.send_chat_action(message.chat.id, 'typing')
     for y in detail_prod:
         if str(message.text) == str(y['title']):
             text = f"{y['title']}\n\n{y['description']}\n\nNarxi: {y['price']:,} sum"
-            await message.answer_photo(photo=y['image'], caption=text)
+            await message.answer_photo(photo=photo, caption=text)
             await message.answer('Miqdorini tanlang yoki kiriting', reply_markup=mah_miqdori)
             await OrderData.detail.set()
             await state.update_data(

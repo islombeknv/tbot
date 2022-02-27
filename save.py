@@ -20,7 +20,7 @@ def save_user(message, number=None, address=None) -> int():
         'number': number,
         'address': address,
     }
-    x = requests.post(url='https://papayes.cf/user/register/', data=post_data)
+    x = requests.post(url='http://127.0.0.1:8000/user/register/', data=post_data)
     return x.status_code
 
 
@@ -33,12 +33,12 @@ def save_korzina(message, product, price, count):
         'price': price,
         'count': count,
     }
-    requests.post(url='https://papayes.cf/korzina/create/', data=post_data)
+    requests.post(url='http://127.0.0.1:8000/korzina/create/', data=post_data)
 
 
 @threaded
 def del_korzina(pk):
-    requests.delete(url=f'https://papayes.cf/korzina/delete/{pk}')
+    requests.delete(url=f'http://127.0.0.1:8000/korzina/delete/{pk}')
 
 
 def Create_order(product, price, address, number, user) -> int():
@@ -50,5 +50,5 @@ def Create_order(product, price, address, number, user) -> int():
         "order": 'Kutilmoqda',
         "user": user
     }
-    x = requests.post(url='https://papayes.cf/order/', data=data)
+    x = requests.post(url='http://127.0.0.1:8000/order/', data=data)
     return x.status_code

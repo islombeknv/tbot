@@ -1,13 +1,13 @@
 import requests
 from datetime import datetime
 import pytz
-import ujson
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, CommandStart
-from aiogram.types import Message, CallbackQuery, ContentType
+from aiogram.types import Message, CallbackQuery
 from keyboards.default.newkeyboards import menu, settings
 from keyboards.default.orderkeyboards import but, ordbut, delevery, checkbutton, comback, location, number
+from keyboards.inline.mycallbak import ordcallback
 from keyboards.inline.utils import my_callback
 from data.config import ADMINS
 from loader import dp
@@ -17,7 +17,7 @@ from utils.location import get_address_from_coords
 
 
 @dp.message_handler(Command('start'))
-async def show_menu(message: Message):
+async def show_menu1(message: Message):
     await message.answer(f"Assalomu aleykum {message.from_user.full_name}", reply_markup=menu)
     if save_user(message) == 201:
         join = datetime.now(pytz.timezone('Asia/Tashkent')).strftime('%Y-%m-%d, %H:%M')
@@ -29,40 +29,100 @@ async def show_menu(message: Message):
 
 
 @dp.message_handler(CommandStart(), state=OrderData)
-async def show_menu(message: Message, state: FSMContext):
+async def show_menu2(message: Message, state: FSMContext):
     await message.answer(f"Assalomu alekum {message.from_user.full_name}", reply_markup=menu)
     await state.finish()
 
 
 @dp.message_handler(CommandStart(), state=RegOrderData)
-async def show_menu(message: Message, state: FSMContext):
+async def show_menu3(message: Message, state: FSMContext):
     await message.answer(f"Assalomu alekum {message.from_user.full_name}", reply_markup=menu)
     await state.finish()
 
 
 @dp.message_handler(text='🍔 Buyurtma berish')
-async def show_menu(message: Message):
+async def show_menu4(message: Message):
     await message.answer(f"Categories", reply_markup=but)
     await OrderData.category.set()
 
 
 @dp.message_handler(text='📦 Buyurtmalarim')
-async def show_menu(message: Message):
-    data = requests.get(f'http://127.0.0.1:8000/order/{message.from_user.id}/').json()['results'][0]
-    data = ujson.dumps(data)
-    for i in data:
-        await message.answer(i)
+async def Order(message: Message):
+    keyboard = types.InlineKeyboardMarkup()
+    data = requests.get(f'http://127.0.0.1:8000/order/{message.from_user.id}/').json()
 
+    try:
+        if data:
+            if data['page_number'] != data['count'] and data['page_number'] == 1:
+                keyboard.add(types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'),
+                             types.InlineKeyboardButton('➡️',
+                                                        callback_data=ordcallback.new(num=data['page_number'] + 1)))
+            elif data['page_number'] != data['count'] and data['page_number'] != 1:
+                keyboard.add(
+                    types.InlineKeyboardButton('⬅️', callback_data=ordcallback.new(num=data['page_number'] - 1)),
+                    types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'),
+                    types.InlineKeyboardButton('➡️', callback_data=ordcallback.new(num=data['page_number'] + 1)))
+            elif data['count'] == 1:
+                keyboard.add(types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'))
+            elif data['page_number'] == data['count']:
+                keyboard.add(
+                    types.InlineKeyboardButton('⬅️', callback_data=ordcallback.new(num=data['page_number'] - 1)),
+                    types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'))
+
+            await message.answer(f'ID: {data["results"][0]["id"]}\n'
+                                 f'Vaqti: {data["results"][0]["created_at"]}\n'
+                                 f'Telefon: {data["results"][0]["number"]}\n'
+                                 f'Narxi: {data["results"][0]["price"]}\n'
+                                 f'\nHolati: {data["results"][0]["order"]}',
+                                 reply_markup=keyboard)
+
+    except:
+        await message.answer('Sizda buyurtmalar yo\'q')
+
+
+@dp.callback_query_handler(ordcallback.filter())
+async def myorder(call: CallbackQuery, callback_data: dict):
+    data = requests.get(f'http://127.0.0.1:8000/order/{call.from_user.id}/?page={callback_data.get("num")}').json()
+    keyboard = types.InlineKeyboardMarkup()
+
+    if data:
+        try:
+            if data['page_number'] == 1:
+                keyboard.add(types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'),
+                             types.InlineKeyboardButton('➡️',
+                                                        callback_data=ordcallback.new(num=data['page_number'] + 1)))
+            elif data['page_number'] != data['count'] and data['page_number'] != 1:
+                keyboard.add(
+                    types.InlineKeyboardButton('⬅️', callback_data=ordcallback.new(num=data['page_number'] - 1)),
+                    types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'),
+                    types.InlineKeyboardButton('➡️', callback_data=ordcallback.new(num=data['page_number'] + 1)))
+
+            elif data['page_number'] == data['count']:
+                keyboard.add(
+                    types.InlineKeyboardButton('⬅️', callback_data=ordcallback.new(num=data['page_number'] - 1)),
+                    types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'))
+
+            await dp.bot.edit_message_text(text=f'ID: {data["results"][0]["id"]}\n'
+                                                f'Vaqti: {data["results"][0]["created_at"]}\n'
+                                                f'Telefon: {data["results"][0]["number"]}\n'
+                                                f'Narxi: {data["results"][0]["price"]}\n'
+                                                f'\nHolati: {data["results"][0]["order"]}',
+                                                chat_id=call.message.chat.id,
+                                                message_id=call.message.message_id, reply_markup=keyboard)
+        except:
+            pass
+    else:
+        await call.answer('Sizda buyurtmalar yo\'q')
 
 @dp.message_handler(text='⚙ Настройки')
-async def show_menu(message: Message):
+async def show_menu5(message: Message):
     await message.answer(f"Настройки временно не доступны", reply_markup=settings)
 
 
 @dp.message_handler(text='🛒 Korzina')
-async def show_menu(message: Message):
+async def show_menu6(message: Message):
     keyboard = types.InlineKeyboardMarkup(row_width=3, )
-    data = requests.get(f'https://papayes.cf/korzina/list/{message.from_user.id}').json()
+    data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     x = 0
     txt = f'🛒Savatdagi mahsulotlar\n\n'
     for i in data:
@@ -85,14 +145,14 @@ async def show_menu(message: Message):
 
 @dp.callback_query_handler(my_callback.filter(item='clear'))
 async def korzinaclear(call: CallbackQuery, callback_data: dict):
-    requests.get(url=f'https://papayes.cf/korzina/clear/{call.from_user.id}')
+    requests.get(url=f'http://127.0.0.1:8000/korzina/clear/{call.from_user.id}')
     await dp.bot.edit_message_text(text='🛒 Korzina tozalandi', chat_id=call.message.chat.id,
                                    message_id=call.message.message_id)
 
 
 @dp.callback_query_handler(my_callback.filter(item='order'))
 async def order(call: CallbackQuery, callback_data: dict):
-    data = requests.get(f'https://papayes.cf/korzina/list/{call.from_user.id}').json()
+    data = requests.get(f'http://127.0.0.1:8000/korzina/list/{call.from_user.id}').json()
     if data:
         await dp.bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         await dp.bot.send_message(chat_id=call.message.chat.id, text='To`lov turini tanlang', reply_markup=ordbut)
@@ -104,9 +164,9 @@ async def order(call: CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(my_callback.filter())
 async def korzina(call: CallbackQuery, callback_data: dict):
     pk = callback_data.get('item').split('_')[1]
-    requests.delete(url=f'https://papayes.cf/korzina/delete/{pk}')
+    requests.delete(url=f'http://127.0.0.1:8000/korzina/delete/{pk}')
     keyboard = types.InlineKeyboardMarkup(row_width=3)
-    data = requests.get(f'https://papayes.cf/korzina/list/{call.from_user.id}').json()
+    data = requests.get(f'http://127.0.0.1:8000/korzina/list/{call.from_user.id}').json()
     x = 0
     txt = f'🛒Savatdagi mahsulotlar\n\n'
     for i in data:
@@ -173,7 +233,7 @@ async def regordernum(message: Message, state: FSMContext):
 
 @dp.message_handler(state=RegOrderData.delivery)
 async def regorder2(message: Message, state: FSMContext):
-    data = requests.get(f'https://papayes.cf/korzina/list/{message.from_user.id}').json()
+    data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     txt = ''
     x = 0
     for i in data:
@@ -205,7 +265,7 @@ async def regorder2(message: Message, state: FSMContext):
 @dp.message_handler(content_types='location', state=RegOrderData.location)
 @dp.message_handler(content_types='text', state=RegOrderData.location)
 async def regorder2(message: Message, state: FSMContext):
-    data = requests.get(f'https://papayes.cf/korzina/list/{message.from_user.id}').json()
+    data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     date = datetime.now(pytz.timezone('Asia/Tashkent')).strftime('%Y-%m-%d, %H:%M')
     if message.text == '⬅️ Orqaga':
         await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
@@ -247,7 +307,7 @@ async def regorder2(message: Message, state: FSMContext):
             if db.get("latitude") and db.get("longitude"):
                 await dp.bot.send_location(admin, latitude=db.get("latitude"), longitude=db.get("longitude"))
 
-        Create_order(product, price, address, number, message.from_user.id)
+        Create_order(product, price, address, num, message.from_user.id)
 
         await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
         await state.finish()
@@ -310,7 +370,7 @@ async def regorder3(message: Message, state: FSMContext):
     await state.update_data(
         {"comment": message.text}
     )
-    data = requests.get(f'https://papayes.cf/korzina/list/{message.from_user.id}').json()
+    data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     txt = ''
     x = 0
     for i in data:
@@ -333,7 +393,7 @@ async def regorder3(message: Message, state: FSMContext):
 
 @dp.message_handler(content_types='text', state=RegOrderData.confirm)
 async def regorder4(message: Message, state: FSMContext):
-    data = requests.get(f'https://papayes.cf/korzina/list/{message.from_user.id}').json()
+    data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     date = datetime.now(pytz.timezone('Asia/Tashkent')).strftime('%Y-%m-%d, %H:%M')
     if message.text == '⬅️ Orqaga':
         await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
@@ -375,7 +435,7 @@ async def regorder4(message: Message, state: FSMContext):
             if db.get("latitude") and db.get("longitude"):
                 await dp.bot.send_location(admin, latitude=db.get("latitude"), longitude=db.get("longitude"))
 
-        Create_order(product, price, address, number, message.from_user.id)
+        Create_order(product, price, address, num, message.from_user.id)
 
         await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
         await state.finish()
