@@ -4,9 +4,11 @@ import pytz
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Command, CommandStart
-from aiogram.types import Message, CallbackQuery
-from keyboards.default.newkeyboards import menu, settings
-from keyboards.default.orderkeyboards import but, ordbut, delevery, checkbutton, comback, location, number
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
+from keyboards.default.newkeyboards import menu, menu_rus
+from keyboards.default.orderkeyboards import but, ordbut, delevery, checkbutton, comback, location, number, but_rus, \
+    ordbut_rus
+from keyboards.inline.lang import langs
 from keyboards.inline.mycallbak import ordcallback
 from keyboards.inline.utils import my_callback
 from data.config import ADMINS
@@ -15,10 +17,14 @@ from save import save_user, Create_order
 from states.orderState import OrderData, RegOrderData
 from utils.location import get_address_from_coords
 
+users = dict()
+
 
 @dp.message_handler(Command('start'))
 async def show_menu1(message: Message):
-    await message.answer(f"Assalomu aleykum {message.from_user.full_name}", reply_markup=menu)
+    users[message.from_user.id] = dict()
+    await dp.bot.send_message(message.chat.id, "Welcome to Papayes", reply_markup=ReplyKeyboardRemove())
+    await dp.bot.send_message(message.chat.id, "Tilni tanlang | Выберите язык", reply_markup=langs)
     if save_user(message) == 201:
         join = datetime.now(pytz.timezone('Asia/Tashkent')).strftime('%Y-%m-%d, %H:%M')
         for admin in ADMINS:
@@ -28,25 +34,50 @@ async def show_menu1(message: Message):
             await dp.bot.send_message(admin, txt, parse_mode='HTML')
 
 
+@dp.callback_query_handler(text=['uzb', 'rus'])
+async def myorder(call: CallbackQuery):
+    await dp.bot.delete_message(call.message.chat.id, call.message.message_id)
+    if call.data == 'uzb':
+        users[call.from_user.id]['lang'] = 'uzb'
+        await dp.bot.send_message(call.message.chat.id, f"Assalomu alekum {call.from_user.full_name}",
+                                  reply_markup=menu)
+    elif call.data == 'rus':
+        users[call.from_user.id]['lang'] = 'rus'
+        await dp.bot.send_message(call.message.chat.id, f"Ассалому алекум {call.from_user.full_name}",
+                                  reply_markup=menu_rus)
+
+
 @dp.message_handler(CommandStart(), state=OrderData)
 async def show_menu2(message: Message, state: FSMContext):
-    await message.answer(f"Assalomu alekum {message.from_user.full_name}", reply_markup=menu)
     await state.finish()
+    lang = users[message.from_user.id].get('lang', '-')
+    if lang == 'rus':
+        await message.answer(f"Ассалому алекум {message.from_user.full_name}", reply_markup=menu_rus)
+    else:
+        await message.answer(f"Assalomu alekum {message.from_user.full_name}", reply_markup=menu)
 
 
 @dp.message_handler(CommandStart(), state=RegOrderData)
 async def show_menu3(message: Message, state: FSMContext):
-    await message.answer(f"Assalomu alekum {message.from_user.full_name}", reply_markup=menu)
     await state.finish()
+    lang = users[message.from_user.id].get('lang', '-')
+    if lang == 'rus':
+        await message.answer(f"Ассалому алекум {message.from_user.full_name}", reply_markup=menu_rus)
+    else:
+        await message.answer(f"Assalomu alekum {message.from_user.full_name}", reply_markup=menu)
 
 
-@dp.message_handler(text='🍔 Buyurtma berish')
+@dp.message_handler(text=['🍔 Buyurtma berish', '🍔 Заказать'])
 async def show_menu4(message: Message):
-    await message.answer(f"Categories", reply_markup=but)
+    lang = users[message.from_user.id].get('lang', '-')
+    if lang == 'rus':
+        await message.answer('Категории', reply_markup=but_rus)
+    else:
+        await message.answer('Kategoriyalar', reply_markup=but)
     await OrderData.category.set()
 
 
-@dp.message_handler(text='📦 Buyurtmalarim')
+@dp.message_handler(text=['📦 Buyurtmalarim', '📦 Мои заказы'])
 async def Order(message: Message):
     keyboard = types.InlineKeyboardMarkup()
     data = requests.get(f'http://127.0.0.1:8000/order/{message.from_user.id}/').json()
@@ -69,15 +100,25 @@ async def Order(message: Message):
                     types.InlineKeyboardButton('⬅️', callback_data=ordcallback.new(num=data['page_number'] - 1)),
                     types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'))
 
-            await message.answer(f'ID: {data["results"][0]["id"]}\n'
-                                 f'Vaqti: {data["results"][0]["created_at"]}\n'
-                                 f'Telefon: {data["results"][0]["number"]}\n'
-                                 f'Narxi: {data["results"][0]["price"]}\n'
-                                 f'\nHolati: {data["results"][0]["order"]}',
-                                 reply_markup=keyboard)
+            lang = users[message.from_user.id].get('lang', '-')
+            if lang == 'rus':
+                await message.answer(f'ID: {data["results"][0]["id"]}\n'
+                                     f'Время: {data["results"][0]["created_at"]}\n'
+                                     f'Телефон: {data["results"][0]["number"]}\n'
+                                     f'Расходы: {data["results"][0]["price"]}\n'
+                                     f'\nУсловие: {data["results"][0]["order"]}',
+                                     reply_markup=keyboard)
+
+            else:
+                await message.answer(f'ID: {data["results"][0]["id"]}\n'
+                                     f'Vaqti: {data["results"][0]["created_at"]}\n'
+                                     f'Telefon: {data["results"][0]["number"]}\n'
+                                     f'Narxi: {data["results"][0]["price"]}\n'
+                                     f'\nHolati: {data["results"][0]["order"]}',
+                                     reply_markup=keyboard)
 
     except:
-        await message.answer('Sizda buyurtmalar yo\'q')
+        await message.answer('Sizda buyurtmalar yo\'q | У вас нет заказов')
 
 
 @dp.callback_query_handler(ordcallback.filter())
@@ -101,53 +142,94 @@ async def myorder(call: CallbackQuery, callback_data: dict):
                 keyboard.add(
                     types.InlineKeyboardButton('⬅️', callback_data=ordcallback.new(num=data['page_number'] - 1)),
                     types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'))
+            lang = users[call.from_user.id].get('lang', '-')
+            if lang == 'rus':
+                await dp.bot.edit_message_text(text=f'ID: {data["results"][0]["id"]}\n'
+                                                    f'Время: {data["results"][0]["created_at"]}\n'
+                                                    f'Телефон: {data["results"][0]["number"]}\n'
+                                                    f'Расходы: {data["results"][0]["price"]}\n'
+                                                    f'\nУсловие: {data["results"][0]["order"]}',
+                                               chat_id=call.message.chat.id,
+                                               message_id=call.message.message_id, reply_markup=keyboard)
 
-            await dp.bot.edit_message_text(text=f'ID: {data["results"][0]["id"]}\n'
-                                                f'Vaqti: {data["results"][0]["created_at"]}\n'
-                                                f'Telefon: {data["results"][0]["number"]}\n'
-                                                f'Narxi: {data["results"][0]["price"]}\n'
-                                                f'\nHolati: {data["results"][0]["order"]}',
-                                                chat_id=call.message.chat.id,
-                                                message_id=call.message.message_id, reply_markup=keyboard)
+            else:
+                await dp.bot.edit_message_text(text=f'ID: {data["results"][0]["id"]}\n'
+                                                    f'Vaqti: {data["results"][0]["created_at"]}\n'
+                                                    f'Telefon: {data["results"][0]["number"]}\n'
+                                                    f'Narxi: {data["results"][0]["price"]}\n'
+                                                    f'\nHolati: {data["results"][0]["order"]}',
+                                               chat_id=call.message.chat.id,
+                                               message_id=call.message.message_id, reply_markup=keyboard)
         except:
             pass
     else:
-        await call.answer('Sizda buyurtmalar yo\'q')
-
-@dp.message_handler(text='⚙ Настройки')
-async def show_menu5(message: Message):
-    await message.answer(f"Настройки временно не доступны", reply_markup=settings)
+        await call.answer('Sizda buyurtmalar yo\'q | У вас нет заказов')
 
 
-@dp.message_handler(text='🛒 Korzina')
+@dp.message_handler(text=['⚙ Настройки', '⚙ Sozlamalar'])
+async def settings(message: Message):
+    lang = users[message.from_user.id].get('lang', '-')
+    if lang == 'rus':
+        await message.answer("Выберите язык", reply_markup=langs)
+    else:
+        await message.answer("Tilni tanlang", reply_markup=langs)
+
+
+@dp.message_handler(text=['🛒 Korzina', '🛒 Корзина'])
 async def show_menu6(message: Message):
-    keyboard = types.InlineKeyboardMarkup(row_width=3, )
+    but_uz = types.InlineKeyboardMarkup(row_width=3, )
+    but_ru = types.InlineKeyboardMarkup(row_width=3, )
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     x = 0
     txt = f'🛒Savatdagi mahsulotlar\n\n'
+    txt_rus = f'🛒Товары в корзине\n\n'
     for i in data:
         txt += f'🔹<b>{i["product"]}</b>\n' \
                f'{i["count"]} x {i["price"]} = {int(i["price"]) * int(i["count"]):,} \n\n'
         x += i["price"] * int(i["count"])
+        txt_rus += f'🔹<b>{i["product"]}</b>\n' \
+                   f'{i["count"]} x {i["price"]} = {int(i["price"]) * int(i["count"]):,} \n\n'
     txt += f'<b>Umumiy:</b> {x:,} sum'.replace(',', ' ')
+    txt_rus += f'<b>Общий:</b> {x:,} sum'.replace(',', ' ')
 
-    keyboard.row(*(types.InlineKeyboardButton(f'✖️{i["product"]}',
-                                              callback_data=my_callback.new(item=f'id_{i["id"]}')) for i in data))
-    keyboard.add(types.InlineKeyboardButton('♻️Tozalash', callback_data=my_callback.new(item='clear')))
-    keyboard.add(types.InlineKeyboardButton('✅ Rasmiylashtirish', callback_data=my_callback.new(item='order')))
+    but_uz.row(*(types.InlineKeyboardButton(f'✖️{i["product"]}',
+                                            callback_data=my_callback.new(item=f'id_{i["id"]}')) for i in data))
+    but_uz.add(types.InlineKeyboardButton('♻️Tozalash', callback_data=my_callback.new(item='clear')))
+    but_uz.add(types.InlineKeyboardButton('✅ Rasmiylashtirish', callback_data=my_callback.new(item='order')))
+
+    but_ru.row(*(types.InlineKeyboardButton(f'✖️{i["product"]}',
+                                            callback_data=my_callback.new(item=f'id_{i["id"]}')) for i in data))
+    but_ru.add(types.InlineKeyboardButton('♻️Уборка', callback_data=my_callback.new(item='clear')))
+    but_ru.add(types.InlineKeyboardButton('✅ Регистрация', callback_data=my_callback.new(item='order')))
+
     if data:
-        await message.answer(txt, reply_markup=keyboard, parse_mode='HTML')
+        lang = users[message.from_user.id].get('lang', '-')
+        if lang == 'rus':
+            await message.answer(txt_rus, reply_markup=but_ru, parse_mode='HTML')
+        else:
+            await message.answer(txt, reply_markup=but_uz, parse_mode='HTML')
     else:
-        await message.answer('Korzina bo\'sh, Mahsulotlarni tanlang va korzinaga qo\'shing', reply_markup=but,
-                             reply=True)
+        lang = users[message.from_user.id].get('lang', '-')
+        if lang == 'rus':
+            await message.answer('Корзина пуста, выберите товары и добавьте их в корзину', reply_markup=but_rus,
+                                 reply=True)
+        else:
+            await message.answer('Korzina bo\'sh, Mahsulotlarni tanlang va korzinaga qo\'shing', reply_markup=but,
+                                 reply=True)
         await OrderData.category.set()
 
 
 @dp.callback_query_handler(my_callback.filter(item='clear'))
 async def korzinaclear(call: CallbackQuery, callback_data: dict):
     requests.get(url=f'http://127.0.0.1:8000/korzina/clear/{call.from_user.id}')
-    await dp.bot.edit_message_text(text='🛒 Korzina tozalandi', chat_id=call.message.chat.id,
-                                   message_id=call.message.message_id)
+
+    lang = users[call.from_user.id].get('lang', '-')
+    if lang == 'rus':
+        await dp.bot.edit_message_text(text='🛒 Корзина очищена', chat_id=call.message.chat.id,
+                                       message_id=call.message.message_id)
+    else:
+        await dp.bot.edit_message_text(text='🛒 Korzina tozalandi', chat_id=call.message.chat.id,
+                                       message_id=call.message.message_id)
 
 
 @dp.callback_query_handler(my_callback.filter(item='order'))
@@ -155,10 +237,18 @@ async def order(call: CallbackQuery, callback_data: dict):
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{call.from_user.id}').json()
     if data:
         await dp.bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-        await dp.bot.send_message(chat_id=call.message.chat.id, text='To`lov turini tanlang', reply_markup=ordbut)
+        lang = users[call.from_user.id].get('lang', '-')
+        if lang == 'rus':
+            await dp.bot.send_message(chat_id=call.message.chat.id, text='Выберите тип оплаты', reply_markup=ordbut_rus)
+        else:
+            await dp.bot.send_message(chat_id=call.message.chat.id, text='To`lov turini tanlang', reply_markup=ordbut)
         await RegOrderData.pay.set()
     else:
-        await call.answer(text="Korzina bo'sh", show_alert=True)
+        lang = users[call.from_user.id].get('lang', '-')
+        if lang == 'rus':
+            await call.answer(text="Корзина пуста", show_alert=True)
+        else:
+            await call.answer(text="Korzina bo'sh", show_alert=True)
 
 
 @dp.callback_query_handler(my_callback.filter())

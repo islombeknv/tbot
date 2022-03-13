@@ -17,6 +17,8 @@ for i in range(1, 10):
         keyboard_3.append(
             KeyboardButton(text=f'{i}')
         )
+
+
 mah_miqdori = ReplyKeyboardMarkup(
     keyboard=[
         keyboard,
@@ -25,6 +27,22 @@ mah_miqdori = ReplyKeyboardMarkup(
         [
             KeyboardButton(text='🛒 Korzina'),
             KeyboardButton(text='🏠 Bosh menyu')
+        ]
+    ],
+    resize_keyboard=True,
+    row_width=2
+
+)
+
+
+mah_miqdori_rus = ReplyKeyboardMarkup(
+    keyboard=[
+        keyboard,
+        keyboard_2,
+        keyboard_3,
+        [
+            KeyboardButton(text='🛒 Корзина'),
+            KeyboardButton(text='🏠 Главное меню')
         ]
     ],
     resize_keyboard=True,

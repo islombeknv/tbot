@@ -1,16 +1,16 @@
+from pathlib import Path
 from aiogram import executor
 
 from loader import dp
 import middlewares, filters, handlers
 from utils.notify_admins import on_startup_notify
 from utils.set_bot_commands import set_default_commands
-
+I18N_DOMAIN = 'mybot'
+BASE_DIR = Path(__file__).parent
+LOCALES_DIR = BASE_DIR / 'locales'
 
 async def on_startup(dispatcher):
-    # Birlamchi komandalar (/star va /help)
     await set_default_commands(dispatcher)
-
-    # Bot ishga tushgani haqida adminga xabar berish
     await on_startup_notify(dispatcher)
 
 

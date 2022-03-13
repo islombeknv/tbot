@@ -11,7 +11,7 @@ from states.orderState import RegOrderData, OrderData
 @dp.message_handler(commands='developer')
 async def show_menu(message: Message):
     await message.answer(f"Sizga ham shunday bot yoki har qanday bot yaratish "
-                         f"kerak bo'lsa biz bilan bog'laning: @Islombeknv", reply_markup=menu)
+                         f"kerak bo'lsa biz bilan bog'laning: @Islombeknv", reply_markup=menu())
 
 
 @dp.message_handler(commands='developer', state=OrderData)
