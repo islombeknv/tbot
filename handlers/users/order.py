@@ -2,9 +2,9 @@ import requests
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
-from keyboards.default.mahsulotSoni import mah_miqdori
+from keyboards.default.mahsulotSoni import mah_miqdori, mah_miqdori_rus
 from keyboards.default.newkeyboards import menu, menu_rus
-from keyboards.default.orderkeyboards import but
+from keyboards.default.orderkeyboards import but, but_rus
 from states.orderState import OrderData
 from loader import dp, bot
 from save import save_korzina
@@ -81,15 +81,21 @@ async def products_detail(message: types.Message, state: FSMContext):
             await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
 
-    elif message.text == '⬅ Orqaga':
-        await message.answer('Categories', reply_markup=but)
+    elif message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        if lang == 'rus':
+            await message.answer('Категории', reply_markup=but_rus)
+        else:
+            await message.answer('Categories', reply_markup=but)
         await OrderData.category.set()
 
     for y in detail_prod:
         if str(message.text) == str(y['title']):
-            text = f"{y['title']}\n\n{y['description']}\n\nNarxi: {y['price']:,} sum"
+            text = f"{y['title']}\n\n{y['description']}\n\n{y['price']:,} sum"
             await message.answer_photo(photo=photo, caption=text)
-            await message.answer('Miqdorini tanlang yoki kiriting', reply_markup=mah_miqdori)
+            if lang == 'rus':
+                await message.answer('Выберите или введите сумму', reply_markup=mah_miqdori_rus)
+            else:
+                await message.answer('Miqdorini tanlang yoki kiriting', reply_markup=mah_miqdori)
             await OrderData.detail.set()
             await state.update_data(
                 {
@@ -101,18 +107,31 @@ async def products_detail(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=OrderData.detail)
 async def products_detail(message: types.Message, state: FSMContext):
+    lang = users[message.from_user.id].get('lang', '-')
     try:
-        if message.text == '🏠 Bosh menyu':
-            await message.answer('🏠 Bosh menu', reply_markup=menu)
+        if message.text == '🏠 Bosh menyu' or message.text == '🏠 Главное меню':
+            if lang == 'rus':
+                await message.answer('🏠 Главное меню', reply_markup=menu_rus)
+            else:
+                await message.answer('🏠 Bosh menu', reply_markup=menu)
             await state.finish()
 
-        elif message.text == '🛒 Korzina':
-            await message.answer('🏠 Bosh menu', reply_markup=menu)
+        elif message.text == '🛒 Korzina' or message.text == '🛒 Корзина':
+            if lang == 'rus':
+                await message.answer('🏠 Главное меню', reply_markup=menu_rus)
+            else:
+                await message.answer('🏠 Bosh menu', reply_markup=menu)
             await state.finish()
         elif int(message.text):
             data = await state.get_data()
             save_korzina(message, data.get("title"), data.get("price"), message.text)
-            await message.answer('Mahsulot savatchaga qoshildi, davom etamizmi?', reply_markup=but)
+            if lang == 'rus':
+                await message.answer('Товар добавлен в корзину, что нибудь еще?', reply_markup=but_rus)
+            else:
+                await message.answer('Mahsulot savatchaga qoshildi, davom etamizmi?', reply_markup=but)
             await OrderData.category.set()
     except:
-        await message.answer('Siz noto\'g\'ri malimot kiritdingiz. Miqdorini tanlang yoki kiriting!')
+        if lang == 'rus':
+            await message.answer('ошибка')
+        else:
+            await message.answer('Siz noto\'g\'ri malimot kiritdingiz. Miqdorini tanlang yoki kiriting!')
