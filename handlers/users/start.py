@@ -7,7 +7,7 @@ from aiogram.dispatcher.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from keyboards.default.newkeyboards import menu, menu_rus
 from keyboards.default.orderkeyboards import but, ordbut, delevery, checkbutton, comback, location, number, but_rus, \
-    ordbut_rus
+    ordbut_rus, number_rus, delevery_rus, checkbutton_rus, location_rus, comback_rus
 from keyboards.inline.lang import langs
 from keyboards.inline.mycallbak import ordcallback
 from keyboards.inline.utils import my_callback
@@ -255,86 +255,148 @@ async def order(call: CallbackQuery, callback_data: dict):
 async def korzina(call: CallbackQuery, callback_data: dict):
     pk = callback_data.get('item').split('_')[1]
     requests.delete(url=f'http://127.0.0.1:8000/korzina/delete/{pk}')
-    keyboard = types.InlineKeyboardMarkup(row_width=3)
+    but_uz = types.InlineKeyboardMarkup(row_width=3, )
+    but_ru = types.InlineKeyboardMarkup(row_width=3, )
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{call.from_user.id}').json()
     x = 0
     txt = f'🛒Savatdagi mahsulotlar\n\n'
+    txt_rus = f'🛒Товары в корзине\n\n'
     for i in data:
         txt += f'🔹<b>{i["product"]}</b>\n' \
-               f'{i["count"]} x {int(i["price"]):,} = {int(i["price"]) * int(i["count"]):,} \n\n'
+               f'{i["count"]} x {i["price"]} = {int(i["price"]) * int(i["count"]):,} \n\n'
         x += i["price"] * int(i["count"])
+        txt_rus += f'🔹<b>{i["product"]}</b>\n' \
+                   f'{i["count"]} x {i["price"]} = {int(i["price"]) * int(i["count"]):,} \n\n'
     txt += f'<b>Umumiy:</b> {x:,} sum'.replace(',', ' ')
+    txt_rus += f'<b>Общий:</b> {x:,} sum'.replace(',', ' ')
 
-    keyboard.row(*(types.InlineKeyboardButton(f'✖️{i["product"]}',
-                                              callback_data=my_callback.new(item=f'id_{i["id"]}')) for i in data))
-    keyboard.add(types.InlineKeyboardButton('♻️Tozalash', callback_data=my_callback.new(item='clear')))
-    keyboard.add(types.InlineKeyboardButton('✅Rasmiylashtirish', callback_data=my_callback.new(item='order')))
+    but_uz.row(*(types.InlineKeyboardButton(f'✖️{i["product"]}',
+                                            callback_data=my_callback.new(item=f'id_{i["id"]}')) for i in data))
+    but_uz.add(types.InlineKeyboardButton('♻️Tozalash', callback_data=my_callback.new(item='clear')))
+    but_uz.add(types.InlineKeyboardButton('✅ Rasmiylashtirish', callback_data=my_callback.new(item='order')))
+
+    but_ru.row(*(types.InlineKeyboardButton(f'✖️{i["product"]}',
+                                            callback_data=my_callback.new(item=f'id_{i["id"]}')) for i in data))
+    but_ru.add(types.InlineKeyboardButton('♻️Уборка', callback_data=my_callback.new(item='clear')))
+    but_ru.add(types.InlineKeyboardButton('✅ Регистрация', callback_data=my_callback.new(item='order')))
     try:
-        await dp.bot.edit_message_text(text=txt, chat_id=call.message.chat.id,
-                                       message_id=call.message.message_id, reply_markup=keyboard)
+        lang = users[call.from_user.id].get('lang', '-')
+        if lang == 'rus':
+            await dp.bot.edit_message_text(text=txt_rus, chat_id=call.message.chat.id,
+                                           message_id=call.message.message_id, reply_markup=but_ru)
+        else:
+            await dp.bot.edit_message_text(text=txt, chat_id=call.message.chat.id,
+                                           message_id=call.message.message_id, reply_markup=but_uz)
+
     except:
-        await dp.bot.edit_message_text(text='Korzina bo\'sh, Mahsulotlarni tanlang va korzinaga qo\'shing',
-                                       chat_id=call.message.chat.id,
-                                       message_id=call.message.message_id, reply_markup=but)
+        lang = users[call.from_user.id].get('lang', '-')
+        if lang == 'rus':
+            await dp.bot.edit_message_text(text='Корзина пуста, выберите товары и добавьте их в корзину',
+                                           chat_id=call.message.chat.id,
+                                           message_id=call.message.message_id, reply_markup=but_uz)
+        else:
+            await dp.bot.edit_message_text(text='Korzina bo\'sh, Mahsulotlarni tanlang va korzinaga qo\'shing',
+                                           chat_id=call.message.chat.id,
+                                           message_id=call.message.message_id, reply_markup=but)
         await OrderData.category.set()
 
 
 @dp.message_handler(state=RegOrderData.pay)
 async def regorder(message: Message, state: FSMContext):
-    if message.text == '⬅️ Orqaga':
-        await message.answer('🏠 Bosh menu', reply_markup=menu)
+    lang = users[message.from_user.id].get('lang', '-')
+    if message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        if lang == 'rus':
+            await message.answer('🏠 Главное меню', reply_markup=menu_rus)
+        else:
+            await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
+
     elif message.text == '💳 Click':
         await state.update_data(
             {"pay": message.text}
         )
-        await message.answer('Telefon raqamingizni yuboring yoki kiriting Misol: +998991234567', reply_markup=number)
+
+        if lang == 'rus':
+            await message.answer('Отправьте или введите свой номер телефона Пример: +998991234567',
+                                 reply_markup=number_rus)
+        else:
+            await message.answer('Telefon raqamingizni yuboring yoki kiriting Misol: +998991234567',
+                                 reply_markup=number)
         await RegOrderData.number.set()
-    elif message.text == '💵 Naqd':
+
+    elif message.text == '💵 Naqd' or message.text == '💵 Наличные':
         await state.update_data(
             {"pay": message.text}
         )
-        await message.answer('Telefon raqamingizni yuboring yoki kiriting Misol: +998991234567', reply_markup=number)
+        if lang == 'rus':
+            await message.answer('Отправьте или введите свой номер телефона Пример: +998991234567',
+                                 reply_markup=number_rus)
+        else:
+            await message.answer('Telefon raqamingizni yuboring yoki kiriting Misol: +998991234567',
+                                 reply_markup=number)
+
         await RegOrderData.number.set()
 
 
 @dp.message_handler(state=RegOrderData.number)
 @dp.message_handler(content_types='contact', state=RegOrderData.number)
 async def regordernum(message: Message, state: FSMContext):
-    if message.text == '⬅️ Orqaga':
-        await message.answer('To`lov turini yuboring', reply_markup=ordbut)
+    lang = users[message.from_user.id].get('lang', '-')
+
+    if message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        if lang == 'rus':
+            await message.answer('Отправить тип платежа', reply_markup=ordbut_rus)
+        else:
+            await message.answer('To`lov turini yuboring', reply_markup=ordbut)
         await RegOrderData.pay.set()
+
     elif message.contact.phone_number:
         await state.update_data(
             {"number": message.contact.phone_number}
         )
-        await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
+        if lang == 'rus':
+            await message.answer('Выберите тип доставки', reply_markup=delevery_rus)
+        else:
+            await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
         await RegOrderData.delivery.set()
     elif len(message.text) == 12 or len(message.text) == 13:
         await state.update_data(
             {"number": message.text}
         )
-        await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
+        if lang == 'rus':
+            await message.answer('Выберите тип доставки', reply_markup=delevery_rus)
+        else:
+            await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
         await RegOrderData.delivery.set()
     else:
-        await message.answer("Nomer xato!", reply_markup=number)
+        await message.answer("Nomer xato! | Номер ошибки!", reply_markup=number)
         await RegOrderData.number.set()
 
 
 @dp.message_handler(state=RegOrderData.delivery)
 async def regorder2(message: Message, state: FSMContext):
+    lang = users[message.from_user.id].get('lang', '-')
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     txt = ''
+    txt_rus = ''
     x = 0
     for i in data:
         txt += f'<b>{i["product"]}</b>\n' \
                f'{i["count"]} x {i["price"]} = {int(i["price"]) * int(i["count"]):,}\n'
+        txt_rus += f'<b>{i["product"]}</b>\n' \
+                   f'{i["count"]} x {i["price"]} = {int(i["price"]) * int(i["count"]):,}\n'
         x += i["price"] * int(i["count"])
     txt += f'\n<b>Umumiy:</b> {x:,} sum'.replace(',', ' ')
-    if message.text == '⬅️ Orqaga':
-        await message.answer('Telefon raqamingizni yuboring yoki kiriting Misol: +998991234567', reply_markup=number)
+    txt_rus += f'\n<b>Общий:</b> {x:,} sum'.replace(',', ' ')
+    if message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        if lang == 'rus':
+            await message.answer('Отправьте или введите свой номер телефона Пример: +998991234567',
+                                 reply_markup=number_rus)
+        else:
+            await message.answer('Telefon raqamingizni yuboring yoki kiriting Misol: +998991234567',
+                                 reply_markup=number)
         await RegOrderData.number.set()
-    elif message.text == '🏫 Olib ketish':
+    elif message.text == '🏫 Olib ketish' or message.text == '🏫 Самовывоз':
         await state.update_data(
             {"delevery": message.text}
         )
@@ -342,13 +404,20 @@ async def regorder2(message: Message, state: FSMContext):
         pay = data.get("pay")
         delever = data.get("delevery")
         text = f"<b>Sizning buyurtmangiz</b>\nNomer:{data.get('number')}\nTo'lov:{pay}\nYetkazib berish:{delever}"
-        await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
+        text_rus = f"<b>Твоя очередь</b>\nНомер:{data.get('number')}\nОплата:{pay}\nДоставка:{delever}"
+        if lang == 'rus':
+            await message.answer(f'{text_rus}\n\n{txt_rus},', reply_markup=checkbutton_rus)
+        else:
+            await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
         await RegOrderData.location.set()
-    elif message.text == '🛵 Yetkazib berish':
+    elif message.text == '🛵 Yetkazib berish' or message.text == '🛵 Доставка':
         await state.update_data(
             {"delevery": message.text}
         )
-        await message.answer(f'Manzilni kiriting, tekst yoki lokatsiya yuboring', reply_markup=location)
+        if lang == 'rus':
+            await message.answer(f'Введите адрес, отправьте текст или Локатцию', reply_markup=location_rus)
+        else:
+            await message.answer(f'Manzilni kiriting, tekst yoki lokatsiya yuboring', reply_markup=location)
         await RegOrderData.location.set()
 
 
@@ -357,11 +426,16 @@ async def regorder2(message: Message, state: FSMContext):
 async def regorder2(message: Message, state: FSMContext):
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     date = datetime.now(pytz.timezone('Asia/Tashkent')).strftime('%Y-%m-%d, %H:%M')
-    if message.text == '⬅️ Orqaga':
-        await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
+    lang = users[message.from_user.id].get('lang', '-')
+    if message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        if lang == 'rus':
+            await message.answer('Выберите тип доставки', reply_markup=delevery_rus)
+        else:
+            await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
+
         await RegOrderData.delivery.set()
 
-    elif message.text == '✅ Buyurtmani tasdiqlash':
+    elif message.text == '✅ Buyurtmani tasdiqlash' or message.text == '✅ Подтвердить заказ':
         txt = ''
         x = 0
         product = ''
@@ -398,16 +472,24 @@ async def regorder2(message: Message, state: FSMContext):
                 await dp.bot.send_location(admin, latitude=db.get("latitude"), longitude=db.get("longitude"))
 
         Create_order(product, price, address, num, message.from_user.id)
-
-        await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
+        if lang == 'rus':
+            await message.answer("Заказ принят! Мы скоро с Вами свяжемся", reply_markup=menu_rus)
+        else:
+            await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
         await state.finish()
 
-    elif message.text == '❌ Bekor qilish':
-        await message.answer("Buyurtma bekor qilindi", reply_markup=menu)
+    elif message.text == '❌ Bekor qilish' or message.text == '❌ Отмена':
+        if lang == 'rus':
+            await message.answer("Заказ отменен", reply_markup=menu_rus)
+        else:
+            await message.answer("Buyurtma bekor qilindi", reply_markup=menu)
         await state.finish()
 
-    elif message.text == '💬 Buyurtmaga kommentariy':
-        await message.answer("Izoh kiriting", reply_markup=comback)
+    elif message.text == '💬 Buyurtmaga kommentariy' or message.text == '💬 Комментарий к заказу':
+        if lang == 'rus':
+            await message.answer("Введите комментарий", reply_markup=comback_rus)
+        else:
+            await message.answer("Izoh kiriting", reply_markup=comback)
         await RegOrderData.comment.set()
 
     elif message.location:
@@ -420,18 +502,26 @@ async def regorder2(message: Message, state: FSMContext):
             }
         )
         txt = ''
+        txt_rus = ''
         x = 0
         for i in data:
             txt += f'<b>{i["product"]}</b>\n' \
                    f'{i["count"]} x {int(i["price"])} = {int(i["price"]) * int(i["count"]):,}\n'
+            txt_rus += f'<b>{i["product"]}</b>\n' \
+                       f'{i["count"]} x {int(i["price"])} = {int(i["price"]) * int(i["count"]):,}\n'
             x += i["price"] * int(i["count"])
         txt += f'\n<b>Umumiy:</b> {x:,} sum'.replace(',', ' ')
+        txt_rus += f'\n<b>Общий:</b> {x:,} sum'.replace(',', ' ')
         data = await state.get_data()
         pay = data.get("pay")
         num = data.get("number")
         delever = data.get("delevery")
         text = f"<b>Sizning buyurtmangiz</b>\nNomer:{num}\nTo'lov:{pay}\nYetkazib berish:{delever}\nManzil:{address}"
-        await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
+        text_rus = f"<b>Ваш заказ</b>\nНомер:{num}\nоплата:{pay}\nДоставка:{delever}\nРасположение:{address}"
+        if lang == 'rus':
+            await message.answer(f'{text_rus}\n\n{txt_rus},', reply_markup=checkbutton_rus)
+        else:
+            await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
         await RegOrderData.location.set()
 
     else:
@@ -439,19 +529,27 @@ async def regorder2(message: Message, state: FSMContext):
             {"address": message.text}
         )
         txt = ''
+        txt_rus = ''
         x = 0
         for i in data:
             txt += f'<b>{i["product"]}</b>\n' \
                    f'{i["count"]} x {int(i["price"])} = {int(i["price"]) * int(i["count"]):,}\n'
+            txt_rus += f'<b>{i["product"]}</b>\n' \
+                       f'{i["count"]} x {int(i["price"])} = {int(i["price"]) * int(i["count"]):,}\n'
             x += i["price"] * int(i["count"])
         txt += f'\n<b>Umumiy:</b> {x:,} sum'.replace(',', ' ')
+        txt_rus += f'\n<b>Общий:</b> {x:,} sum'.replace(',', ' ')
         data = await state.get_data()
         pay = data.get("pay")
         num = data.get("number")
         delever = data.get("delevery")
         address = data.get("address")
         text = f"<b>Sizning buyurtmangiz</b>\nNomer:{num}\nTo'lov:{pay}\nYetkazib berish:{delever}\nManzil:{address}"
-        await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
+        text_rus = f"<b>Ваш заказ</b>\nНомер:{num}\nоплата:{pay}\nДоставка:{delever}\nРасположение:{address}"
+        if lang == 'rus':
+            await message.answer(f'{text_rus}\n\n{txt_rus},', reply_markup=checkbutton_rus)
+        else:
+            await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
         await RegOrderData.location.set()
 
 
@@ -460,36 +558,57 @@ async def regorder3(message: Message, state: FSMContext):
     await state.update_data(
         {"comment": message.text}
     )
+    lang = users[message.from_user.id].get('lang', '-')
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     txt = ''
+    txt_rus = ''
     x = 0
     for i in data:
         txt += f'<b>{i["product"]}</b>\n' \
                f'{i["count"]} x {int(i["price"])} = {int(i["price"]) * int(i["count"]):,}\n'
+        txt_rus += f'<b>{i["product"]}</b>\n' \
+                   f'{i["count"]} x {int(i["price"])} = {int(i["price"]) * int(i["count"]):,}\n'
         x += i["price"] * int(i["count"])
     txt += f'\n<b>Umumiy:</b> {x:,} sum'.replace(',', ' ')
+    txt_rus += f'\n<b>Общий:</b> {x:,} sum'.replace(',', ' ')
     data = await state.get_data()
     pay = data.get("pay")
     delever = data.get("delevery")
     text = f"<b>Sizning buyurtmangiz</b>\nNomer:{data.get('number')}\nTo'lov:{pay}\nYetkazib berish:{delever}\n"
+    text_rus = f"<b>Ваш заказ</b>\nНомер:{data.get('number')}\nоплата:{pay}\nДоставка:{delever}"
     if data.get("address"):
         text = f"<b>Sizning buyurtmangiz</b>\nNomer:{data.get('number')}\nTo'lov:{pay}\nYetkazib berish:{delever}\nManzil:{data.get('address')}\n"
-    elif message.text == '⬅️ Orqaga':
-        await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
+        text_rus = f"<b>Ваш заказ</b>\nНомер:{data.get('number')}\nоплата:{pay}\nДоставка:{delever}Адрес:{data.get('address')}\n"
+    elif message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        if lang == 'rus':
+            await message.answer(f'{text_rus}\n\n{txt_rus},', reply_markup=checkbutton_rus)
+        else:
+            await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
         await RegOrderData.location.set()
-    await message.answer(f'{text}\n<b>Izoh</b>: {data.get("comment")}\n\n{txt}', reply_markup=checkbutton)
+    elif message.text != '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        await state.update_data(
+            {"comment": message.text}
+        )
+        if lang == 'rus':
+            await message.answer(f'{text_rus}\n<b>Примечание</b>: {data.get("comment")}\n\n{txt_rus}', reply_markup=checkbutton_rus)
+        else:
+            await message.answer(f'{text}\n<b>Izoh</b>: {data.get("comment")}\n\n{txt}', reply_markup=checkbutton)
     await RegOrderData.confirm.set()
 
 
 @dp.message_handler(content_types='text', state=RegOrderData.confirm)
 async def regorder4(message: Message, state: FSMContext):
+    lang = users[message.from_user.id].get('lang', '-')
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     date = datetime.now(pytz.timezone('Asia/Tashkent')).strftime('%Y-%m-%d, %H:%M')
-    if message.text == '⬅️ Orqaga':
-        await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
+    if message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        if lang == 'rus':
+            await message.answer('Выберите тип доставки', reply_markup=delevery_rus)
+        else:
+            await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
         await RegOrderData.delivery.set()
 
-    elif message.text == '✅ Buyurtmani tasdiqlash':
+    elif message.text == '✅ Buyurtmani tasdiqlash' or message.text == '✅ Подтвердить заказ':
         txt = ''
         x = 0
         product = ''
@@ -527,13 +646,22 @@ async def regorder4(message: Message, state: FSMContext):
 
         Create_order(product, price, address, num, message.from_user.id)
 
-        await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
+        if lang == 'rus':
+            await message.answer("Заказ принят! Мы скоро с Вами свяжемся", reply_markup=menu_rus)
+        else:
+            await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
         await state.finish()
 
-    elif message.text == '❌ Bekor qilish':
-        await message.answer("Buyurtma bekor qilindi", reply_markup=menu)
+    elif message.text == '❌ Bekor qilish' or message.text == '❌ Отмена':
+        if lang == 'rus':
+            await message.answer("Заказ отменен", reply_markup=menu_rus)
+        else:
+            await message.answer("Buyurtma bekor qilindi", reply_markup=menu)
         await state.finish()
 
-    elif message.text == '💬 Buyurtmaga kommentariy':
-        await message.answer("Izoh kiriting", reply_markup=comback)
+    elif message.text == '💬 Buyurtmaga kommentariy' or message.text == '💬 Комментарий к заказу':
+        if lang == 'rus':
+            await message.answer("Введите комментарий", reply_markup=comback_rus)
+        else:
+            await message.answer("Izoh kiriting", reply_markup=comback)
         await RegOrderData.comment.set()

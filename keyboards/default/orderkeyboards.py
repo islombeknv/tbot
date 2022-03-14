@@ -1,6 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import requests
-
 data = requests.get('http://127.0.0.1:8000/category/').json()
 but = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, )
 but.add(*(KeyboardButton(text=str(num['title'])) for num in data))

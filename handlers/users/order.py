@@ -3,21 +3,29 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from keyboards.default.mahsulotSoni import mah_miqdori
-from keyboards.default.newkeyboards import menu
+from keyboards.default.newkeyboards import menu, menu_rus
 from keyboards.default.orderkeyboards import but
 from states.orderState import OrderData
 from loader import dp, bot
 from save import save_korzina
+from handlers.users.start import users
 
 
 @dp.message_handler(state=OrderData.category)
 async def products(message: types.Message, state: FSMContext):
-    if message.text == '🏠 Bosh menyu':
-        await message.answer('🏠 Bosh menu', reply_markup=menu)
+    lang = users[message.from_user.id].get('lang', '-')
+    if message.text == '🏠 Bosh menyu' or message.text == '🏠 Главное меню':
+        if lang == 'rus':
+            await message.answer('🏠 Главное меню', reply_markup=menu_rus)
+        else:
+            await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
 
-    elif message.text == '⬅️ Orqaga':
-        await message.answer('🏠 Bosh menu', reply_markup=menu)
+    elif message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+        if lang == 'rus':
+            await message.answer('🏠 Главное меню', reply_markup=menu_rus)
+        else:
+            await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
     try:
         data = requests.get(f'http://127.0.0.1:8000/category/{message.text}').json()
@@ -40,8 +48,22 @@ async def products(message: types.Message, state: FSMContext):
                     resize_keyboard=True,
                     row_width=2
                 )
+                prod_key_rus = ReplyKeyboardMarkup(
+                    keyboard=[
+                        keyboard_2,
+                        [
+                            KeyboardButton(text='🏠 Главное меню'),
+                            KeyboardButton(text='⬅️ Назад')
+                        ],
+                    ],
+                    resize_keyboard=True,
+                    row_width=2
+                )
                 await bot.send_chat_action(message.chat.id, 'typing')
-                await message.answer('Mahsulotlar', reply_markup=prod_key)
+                if lang == 'rus':
+                    await message.answer('Продукты', reply_markup=prod_key_rus)
+                else:
+                    await message.answer('Mahsulotlar', reply_markup=prod_key)
                 await OrderData.products.set()
     except:
         pass
@@ -49,10 +71,14 @@ async def products(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=OrderData.products)
 async def products_detail(message: types.Message, state: FSMContext):
+    lang = users[message.from_user.id].get('lang', '-')
     photo = "https://kitoblardunyosi.uz/image/cache/catalog/001-Kitoblar/003_boshqalar/006_ilmiy_ommabop/python-3d-web-500x500h.jpg"
     detail_prod = requests.get(f'http://127.0.0.1:8000/product/?q={message.text}').json()
-    if message.text == '🏠 Bosh menyu':
-        await message.answer('🏠 Bosh menu', reply_markup=menu)
+    if message.text == '🏠 Bosh menyu' or message.text == '🏠 Главное меню':
+        if lang == 'rus':
+            await message.answer('🏠 Главное меню', reply_markup=menu_rus)
+        else:
+            await message.answer('🏠 Bosh menu', reply_markup=menu)
         await state.finish()
 
     elif message.text == '⬅ Orqaga':
