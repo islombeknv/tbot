@@ -24,7 +24,6 @@ def save_user(message, number=None, address=None) -> int():
     return x.status_code
 
 
-
 @threaded
 def save_korzina(message, product, price, count):
     post_data = {
@@ -41,7 +40,7 @@ def del_korzina(pk):
     requests.delete(url=f'http://127.0.0.1:8000/korzina/delete/{pk}')
 
 
-def Create_order(product, price, address, number, user) -> int():
+def Create_order(product, price, address, number, user):
     data = {
         "product": f"{product}",
         "price": f"{price}",
@@ -51,4 +50,46 @@ def Create_order(product, price, address, number, user) -> int():
         "user": user
     }
     x = requests.post(url='http://127.0.0.1:8000/order/', data=data)
-    return x.status_code
+    return [x.status_code, x.text]
+
+
+def OrderConfirm(pk):
+    data = {
+        "order": 'Tasdiqlandi',
+    }
+    requests.patch(url=f'http://127.0.0.1:8000/order/update/{pk}/', data=data)
+
+
+def OrderCalcel(pk):
+    data = {
+        "order": 'Bekor Qilindi',
+    }
+    requests.patch(url=f'http://127.0.0.1:8000/order/update/{pk}/', data=data)
+
+
+def OrderKuryer(pk, kuryer):
+    data = {
+        "kuryer": kuryer,
+    }
+    requests.patch(url=f'http://127.0.0.1:8000/order/update/{pk}/', data=data)
+
+
+def OrderKuryerClear(pk):
+    data = {
+        "kuryer": "",
+    }
+    requests.patch(url=f'http://127.0.0.1:8000/order/update/{pk}/', data=data)
+
+
+def Orderdate(pk, date):
+    data = {
+        "date": date,
+    }
+    requests.patch(url=f'http://127.0.0.1:8000/order/update/{pk}/', data=data)
+
+
+def OrderCleardate(pk):
+    data = {
+        "date": "",
+    }
+    requests.patch(url=f'http://127.0.0.1:8000/order/update/{pk}/', data=data)

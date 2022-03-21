@@ -8,6 +8,7 @@ from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from keyboards.default.newkeyboards import menu, menu_rus
 from keyboards.default.orderkeyboards import but, ordbut, delevery, checkbutton, comback, location, number, but_rus, \
     ordbut_rus, number_rus, delevery_rus, checkbutton_rus, location_rus, comback_rus
+from keyboards.inline.admin import adminbut
 from keyboards.inline.lang import langs
 from keyboards.inline.mycallbak import ordcallback
 from keyboards.inline.utils import my_callback
@@ -81,7 +82,7 @@ async def show_menu4(message: Message):
 async def Order(message: Message):
     keyboard = types.InlineKeyboardMarkup()
     data = requests.get(f'http://127.0.0.1:8000/order/{message.from_user.id}/').json()
-
+    lang = users[message.from_user.id].get('lang', '-')
     try:
         if data:
             if data['page_number'] != data['count'] and data['page_number'] == 1:
@@ -100,9 +101,8 @@ async def Order(message: Message):
                     types.InlineKeyboardButton('⬅️', callback_data=ordcallback.new(num=data['page_number'] - 1)),
                     types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'))
 
-            lang = users[message.from_user.id].get('lang', '-')
             if lang == 'rus':
-                await message.answer(f'ID: {data["results"][0]["id"]}\n'
+                await message.answer(f'ID: #{data["results"][0]["id"]}A\n'
                                      f'Время: {data["results"][0]["created_at"]}\n'
                                      f'Телефон: {data["results"][0]["number"]}\n'
                                      f'Расходы: {data["results"][0]["price"]}\n'
@@ -110,7 +110,7 @@ async def Order(message: Message):
                                      reply_markup=keyboard)
 
             else:
-                await message.answer(f'ID: {data["results"][0]["id"]}\n'
+                await message.answer(f'ID: #{data["results"][0]["id"]}A\n'
                                      f'Vaqti: {data["results"][0]["created_at"]}\n'
                                      f'Telefon: {data["results"][0]["number"]}\n'
                                      f'Narxi: {data["results"][0]["price"]}\n'
@@ -118,7 +118,10 @@ async def Order(message: Message):
                                      reply_markup=keyboard)
 
     except:
-        await message.answer('Sizda buyurtmalar yo\'q | У вас нет заказов')
+        if lang == 'rus':
+            await message.answer('У вас нет заказов')
+        else:
+            await message.answer('Sizda buyurtmalar yo\'q')
 
 
 @dp.callback_query_handler(ordcallback.filter())
@@ -144,7 +147,7 @@ async def myorder(call: CallbackQuery, callback_data: dict):
                     types.InlineKeyboardButton(f"{data['page_number']} / {data['count']}", callback_data='0'))
             lang = users[call.from_user.id].get('lang', '-')
             if lang == 'rus':
-                await dp.bot.edit_message_text(text=f'ID: {data["results"][0]["id"]}\n'
+                await dp.bot.edit_message_text(text=f'ID: #{data["results"][0]["id"]}A\n'
                                                     f'Время: {data["results"][0]["created_at"]}\n'
                                                     f'Телефон: {data["results"][0]["number"]}\n'
                                                     f'Расходы: {data["results"][0]["price"]}\n'
@@ -153,7 +156,7 @@ async def myorder(call: CallbackQuery, callback_data: dict):
                                                message_id=call.message.message_id, reply_markup=keyboard)
 
             else:
-                await dp.bot.edit_message_text(text=f'ID: {data["results"][0]["id"]}\n'
+                await dp.bot.edit_message_text(text=f'ID: #{data["results"][0]["id"]}A\n'
                                                     f'Vaqti: {data["results"][0]["created_at"]}\n'
                                                     f'Telefon: {data["results"][0]["number"]}\n'
                                                     f'Narxi: {data["results"][0]["price"]}\n'
@@ -177,8 +180,8 @@ async def settings(message: Message):
 
 @dp.message_handler(text=['🛒 Korzina', '🛒 Корзина'])
 async def show_menu6(message: Message):
-    but_uz = types.InlineKeyboardMarkup(row_width=3, )
-    but_ru = types.InlineKeyboardMarkup(row_width=3, )
+    but_uz = types.InlineKeyboardMarkup(row_width=1)
+    but_ru = types.InlineKeyboardMarkup(row_width=1)
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     x = 0
     txt = f'🛒Savatdagi mahsulotlar\n\n'
@@ -369,7 +372,10 @@ async def regordernum(message: Message, state: FSMContext):
             await message.answer('Yetkazib berish turini tanlang', reply_markup=delevery)
         await RegOrderData.delivery.set()
     else:
-        await message.answer("Nomer xato! | Номер ошибки!", reply_markup=number)
+        if lang == 'rus':
+            await message.answer("Номер ошибки!", reply_markup=number_rus)
+        else:
+            await message.answer("Номер ошибки!", reply_markup=number)
         await RegOrderData.number.set()
 
 
@@ -436,6 +442,10 @@ async def regorder2(message: Message, state: FSMContext):
         await RegOrderData.delivery.set()
 
     elif message.text == '✅ Buyurtmani tasdiqlash' or message.text == '✅ Подтвердить заказ':
+        if lang == 'rus':
+            await message.answer("Заказ принят! Мы скоро с Вами свяжемся", reply_markup=menu_rus)
+        else:
+            await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
         txt = ''
         x = 0
         product = ''
@@ -456,26 +466,25 @@ async def regorder2(message: Message, state: FSMContext):
         address = ''
         if db.get("comment"):
             com += f'\n<b>Izoh</b>: {db.get("comment")}'
-        text = f"<b>Yangi buyurtma {date}</b>\n\n<b>User: </b> <a href='tg://user?id={message.from_user.id}'>" \
+        res = Create_order(product, price, address, num, message.from_user.id)
+        text = f"<b>Yangi buyurtma {date}</b>\n\nID: #{res[1]}A\n" \
+               f"<b>User: </b> <a href='tg://user?id={message.from_user.id}'>" \
                f"{message.from_user.first_name}</a>\n" \
-               f"Nomer:{num}\nTo'lov:{pay}\nYetkazib berish:{delever}\n{com}\n{txt}"
-
+               f"Nomer: <a href='tel:{num}'>{num}</a>\nTo'lov:{pay}\nYetkazib berish:{delever}\n{com}\n{txt}"
         if db.get("address"):
-            text = f"<b>Yangi buyurtma  {date}</b>\n\n<b>User: </b><a href='tg://user?id={message.from_user.id}'>" \
+            address = db.get("address")
+            text = f"<b>Yangi buyurtma  {date}</b>\n\nID: #{res[1]}A\n<b>User: </b><a href='tg://user?id={message.from_user.id}'>" \
                    f"{message.from_user.first_name}</a>\n" \
                    f"Nomer: {num}\nTo'lov: {pay}\n" \
                    f"Yetkazib berish: {delever}\nManzil: {db.get('address')}\n{com}\n{txt}"
 
         for admin in ADMINS:
-            await dp.bot.send_message(admin, text, parse_mode='HTML')
             if db.get("latitude") and db.get("longitude"):
                 await dp.bot.send_location(admin, latitude=db.get("latitude"), longitude=db.get("longitude"))
-
-        Create_order(product, price, address, num, message.from_user.id)
-        if lang == 'rus':
-            await message.answer("Заказ принят! Мы скоро с Вами свяжемся", reply_markup=menu_rus)
-        else:
-            await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
+            await dp.bot.send_message(admin, text, parse_mode='HTML',
+                                      reply_markup=adminbut(chat_id=message.from_user.id,
+                                                            lang=lang, id=res[1])
+                                      )
         await state.finish()
 
     elif message.text == '❌ Bekor qilish' or message.text == '❌ Отмена':
@@ -555,9 +564,6 @@ async def regorder2(message: Message, state: FSMContext):
 
 @dp.message_handler(state=RegOrderData.comment)
 async def regorder3(message: Message, state: FSMContext):
-    await state.update_data(
-        {"comment": message.text}
-    )
     lang = users[message.from_user.id].get('lang', '-')
     data = requests.get(f'http://127.0.0.1:8000/korzina/list/{message.from_user.id}').json()
     txt = ''
@@ -579,21 +585,23 @@ async def regorder3(message: Message, state: FSMContext):
     if data.get("address"):
         text = f"<b>Sizning buyurtmangiz</b>\nNomer:{data.get('number')}\nTo'lov:{pay}\nYetkazib berish:{delever}\nManzil:{data.get('address')}\n"
         text_rus = f"<b>Ваш заказ</b>\nНомер:{data.get('number')}\nоплата:{pay}\nДоставка:{delever}Адрес:{data.get('address')}\n"
-    elif message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
+
+    if message.text == '⬅️ Orqaga' or message.text == '⬅️ Назад':
         if lang == 'rus':
-            await message.answer(f'{text_rus}\n\n{txt_rus},', reply_markup=checkbutton_rus)
+            await message.answer(f'{text_rus}\n{txt_rus},', reply_markup=checkbutton_rus)
         else:
-            await message.answer(f'{text}\n\n{txt},', reply_markup=checkbutton)
+            await message.answer(f'{text}\n{txt},', reply_markup=checkbutton)
         await RegOrderData.location.set()
-    elif message.text != '⬅️ Orqaga' or message.text == '⬅️ Назад':
+    else:
         await state.update_data(
             {"comment": message.text}
         )
         if lang == 'rus':
-            await message.answer(f'{text_rus}\n<b>Примечание</b>: {data.get("comment")}\n\n{txt_rus}', reply_markup=checkbutton_rus)
+            await message.answer(f'{text_rus}\n<b>Примечание</b>: {message.text}\n\n{txt_rus}',
+                                 reply_markup=checkbutton_rus)
         else:
-            await message.answer(f'{text}\n<b>Izoh</b>: {data.get("comment")}\n\n{txt}', reply_markup=checkbutton)
-    await RegOrderData.confirm.set()
+            await message.answer(f'{text}\n<b>Izoh</b>: {message.text}\n\n{txt}', reply_markup=checkbutton)
+        await RegOrderData.confirm.set()
 
 
 @dp.message_handler(content_types='text', state=RegOrderData.confirm)
@@ -609,6 +617,10 @@ async def regorder4(message: Message, state: FSMContext):
         await RegOrderData.delivery.set()
 
     elif message.text == '✅ Buyurtmani tasdiqlash' or message.text == '✅ Подтвердить заказ':
+        if lang == 'rus':
+            await message.answer("Заказ принят! Мы скоро с Вами свяжемся", reply_markup=menu_rus)
+        else:
+            await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
         txt = ''
         x = 0
         product = ''
@@ -627,29 +639,26 @@ async def regorder4(message: Message, state: FSMContext):
         delever = db.get("delevery")
         com = ''
         address = ''
+        res = Create_order(product, price, address, num, message.from_user.id)
         if db.get("comment"):
             com += f'<b>Izoh</b>: {db.get("comment")}'
-        text = f"<b>Yangi buyurtma {date}</b>\n\n<b>User: </b> <a href='tg://user?id={message.from_user.id}'>" \
+        text = f"<b>Yangi buyurtma {date}</b>\n\nID: #{res[1]}A\n<b>User: </b> <a href='tg://user?id={message.from_user.id}'>" \
                f"{message.from_user.first_name}</a>\n" \
-               f"Nomer:{num}\nTo'lov:{pay}\nYetkazib berish:{delever}\n{com}\n{txt}"
-
+               f"Nomer: <a href='tel:{num}'>{num}</a>\nTo'lov:{pay}\nYetkazib berish:{delever}\n{com}\n{txt}"
         if db.get("address"):
-            text = f"<b>Yangi buyurtma {date}</b>\n\n<b>User: </b><a href='tg://user?id={message.from_user.id}'>" \
+            address = db.get("address")
+            text = f"<b>Yangi buyurtma {date}</b>\n\nID:#{res[1]}A\n<b>User: </b><a href='tg://user?id={message.from_user.id}'>" \
                    f"{message.from_user.first_name}</a>\n" \
                    f"Nomer: {num}\nTo'lov: {pay}\n" \
                    f"Yetkazib berish: {delever}\nManzil: {db.get('address')}\n\n{com}\n\n{txt}"
 
         for admin in ADMINS:
-            await dp.bot.send_message(admin, text, parse_mode='HTML')
             if db.get("latitude") and db.get("longitude"):
                 await dp.bot.send_location(admin, latitude=db.get("latitude"), longitude=db.get("longitude"))
+            await dp.bot.send_message(admin, text, parse_mode='HTML',
+                                      reply_markup=adminbut(chat_id=message.from_user.id,
+                                                            lang=lang, id=res[1]))
 
-        Create_order(product, price, address, num, message.from_user.id)
-
-        if lang == 'rus':
-            await message.answer("Заказ принят! Мы скоро с Вами свяжемся", reply_markup=menu_rus)
-        else:
-            await message.answer("Buyurtma qabul qilindi! Tez orada siz bilan bog'lanamiz", reply_markup=menu)
         await state.finish()
 
     elif message.text == '❌ Bekor qilish' or message.text == '❌ Отмена':
