@@ -19,9 +19,9 @@ class ServiceModelAdmin(admin.ModelAdmin):
 
 @admin.register(OrderModel)
 class ServiceModelAdmin(admin.ModelAdmin):
-    list_filter = ['created_at']
-    list_display = ['product']
-    search_fields = ['product']
+    list_filter = ['created_at', 'order']
+    list_display = ['id', 'number', 'product', 'price', 'order', 'created_at']
+    search_fields = ['product', 'id']
 
 
 @admin.register(CategoryModel)

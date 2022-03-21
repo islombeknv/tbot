@@ -1,6 +1,9 @@
+import json
+from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view
-from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, DestroyAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, DestroyAPIView, \
+    RetrieveUpdateAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
@@ -42,7 +45,6 @@ class Service2ListAPIView(ListAPIView):
             return ProductModel.objects.none()
 
 
-
 class CategoryListAPIView(ListAPIView):
     serializer_class = CategoryModelSerializer
     queryset = CategoryModel.objects.all()
@@ -59,19 +61,20 @@ class OrderCreateView(CreateAPIView):
     def create(self, request, *args, **kwargs):
         product = self.request.POST.get('product')
         price = self.request.POST.get('price')
-        address = self.request.POST.get('address')
+        address = self.request.POST.get('address', 'Olib ketish')
         number = self.request.POST.get('number')
-        order = self.request.POST.get('order')
+        order = 'Tasdiqlanmagan'
         user = self.request.POST.get('user')
         user_id = TelegramUserModel.objects.get(tg_id=user)
         if user_id:
-            OrderModel.objects.create(product=product, price=price, address=address,
-                                      number=number, order=order, user=user_id)
+            ord = OrderModel.objects.create(product=product, price=price, address=address,
+                                            number=number, order=order, user=user_id)
+
             qs = KorzinaModel.objects.filter(user_id=user)
-            if qs:
-                for i in qs:
-                    i.delete()
-            return Response(status=status.HTTP_201_CREATED)
+            # if qs:
+            #     for i in qs:
+            #         i.delete()
+            return HttpResponse(json.dumps(ord.id), content_type="application/json")
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -94,6 +97,16 @@ class OrderListAPIView(ListAPIView):
         if user:
             return OrderModel.objects.filter(user=user).order_by('-pk')
         return OrderModel.objects.nona()
+
+
+class OrderUpdateAPIView(RetrieveUpdateAPIView):
+    serializer_class = OrderModelSerializer
+    queryset = OrderModel.objects.all()
+
+
+class OrderRetrieveAPIView(RetrieveAPIView):
+    serializer_class = OrderModelSerializer
+    queryset = OrderModel.objects.all()
 
 
 class KorzinCreateView(CreateAPIView):

@@ -49,7 +49,8 @@ class TelegramUserModel(models.Model):
 
 
 STATUS = (
-    ('Tasdiqlanmagan', 'Tasdiqlanmagan'),
+    ('Kutilmoqda', 'Kutilmoqda'),
+    ('Bekor Qilindi', 'Bekor Qilindi'),
     ('Tasdiqlandi', 'Tasdiqlandi'),
     ('Yuborildi', 'Yuborildi'),
     ('Yetkazildi', 'Yetkazildi'),
@@ -60,9 +61,11 @@ class OrderModel(models.Model):
     user = models.ForeignKey(TelegramUserModel, on_delete=models.CASCADE)
     product = models.TextField()
     price = models.CharField(max_length=100)
-    address = models.CharField(max_length=200)
+    address = models.CharField(max_length=200, null=True, blank=True)
     number = models.CharField(max_length=15)
-    order = models.CharField(max_length=50, choices=STATUS, default='Tasdiqlanmagan', blank=True)
+    order = models.CharField(max_length=50, choices=STATUS, default='Kutilmoqda')
+    kuryer = models.CharField(max_length=255, null=True, blank=True)
+    date = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
